@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agente IA - QRCode - Reconexão</title>
+    <meta name="description" content="Aplicação de reconexão de QR Code do WhatsApp via n8n webhook">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(99, 179, 130, 0.15);
+            --border-glow: rgba(37, 211, 102, 0.3);
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #25D366;
+            --accent-dark: #128C7E;
+            --accent-glow: rgba(37, 211, 102, 0.15);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --success-bg: rgba(37, 211, 102, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(37, 211, 102, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(18, 140, 126, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(37, 211, 102, 0.03) 0%, transparent 50%);
+            animation: bgPulse 12s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+
+        @keyframes bgPulse {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            100% {
+                transform: translate(-2%, -1%) scale(1.05);
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(37, 211, 102, 0.25);
+            animation: iconFloat 4s ease-in-out infinite;
+        }
+
+        @keyframes iconFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-6px);
+            }
+        }
+
+        .header-icon i {
+            font-size: 32px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        /* Webhook URL Input */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            transition: color 0.3s;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 14px 12px 40px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-wrapper input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .input-wrapper input:focus+i,
+        .input-wrapper input:focus~i {
+            color: var(--accent);
+        }
+
+        /* Button */
+        .btn-generate {
+            width: 100%;
+            padding: 14px 24px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.938rem;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(37, 211, 102, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-generate::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-generate:hover::before {
+            left: 100%;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35);
+        }
+
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+
+        .btn-generate:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-generate:disabled::before {
+            display: none;
+        }
+
+        /* QR Code Area */
+        .qr-area {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .qr-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px dashed var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .qr-container.has-image {
+            border-style: solid;
+            border-color: var(--border-glow);
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        .qr-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+        }
+
+        .qr-placeholder i {
+            font-size: 2.5rem;
+            opacity: 0.4;
+        }
+
+        .qr-placeholder span {
+            font-size: 0.813rem;
+            font-weight: 500;
+        }
+
+        .qr-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 12px;
+            display: none;
+            animation: qrFadeIn 0.5s ease;
+        }
+
+        @keyframes qrFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .qr-image.visible {
+            display: block;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: none;
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(37, 211, 102, 0.15);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .spinner.visible {
+            display: block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Status Messages */
+        .status-msg {
+            margin-top: 16px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.813rem;
+            font-weight: 500;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            animation: msgSlideIn 0.3s ease;
+        }
+
+        @keyframes msgSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-msg.visible {
+            display: flex;
+        }
+
+        .status-msg.error {
+            background: var(--danger-bg);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .status-msg.success {
+            background: var(--success-bg);
+            border: 1px solid rgba(37, 211, 102, 0.2);
+            color: #86efac;
+        }
+
+        /* Timestamp */
+        .timestamp {
+            margin-top: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        .timestamp.visible {
+            display: block;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .footer i {
+            color: var(--accent);
+            margin: 0 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 520px) {
+            .container {
+                padding: 16px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .qr-container {
+                width: 240px;
+                height: 240px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-icon">
+                <i class="fab fa-whatsapp"></i>
+            </div>
+            <h1>Agente IA QRCode</h1>
+            <p>Reconecte seu WhatsApp via n8n</p>
+        </div>
+
+        <div class="card">
+            <div class="input-group">
+                <label for="webhookUrl">
+                    <i class="fas fa-link" style="margin-right: 4px;"></i>
+                    URL do Webhook (n8n)
+                </label>
+                <div class="input-wrapper">
+                    <i class="fas fa-globe"></i>
+                    <input type="url" id="webhookUrl" placeholder="https://seu-n8n.com/webhook/..." autocomplete="url">
+                </div>
+            </div>
+
+            <button class="btn-generate" id="btnGenerate" onclick="generateQRCode()">
+                <i class="fas fa-qrcode"></i>
+                <span>Gerar QR Code</span>
+            </button>
+
+            <div class="qr-area">
+                <div class="qr-container" id="qrContainer">
+                    <div class="qr-placeholder" id="qrPlaceholder">
+                        <i class="fas fa-qrcode"></i>
+                        <span>QR Code aparecerá aqui</span>
+                    </div>
+                    <div class="spinner" id="spinner"></div>
+                    <img class="qr-image" id="qrImage" alt="QR Code WhatsApp">
+                </div>
+
+                <div class="status-msg" id="statusMsg">
+                    <i id="statusIcon"></i>
+                    <span id="statusText"></span>
+                </div>
+
+                <div class="timestamp" id="timestamp"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <i class="fas fa-bolt"></i> Powered by DataClarus
+        </div>
+    </div>
+
+    <script>
+        const webhookInput = document.getElementById('webhookUrl');
+        const btnGenerate = document.getElementById('btnGenerate');
+        const qrContainer = document.getElementById('qrContainer');
+        const qrPlaceholder = document.getElementById('qrPlaceholder');
+        const spinner = document.getElementById('spinner');
+        const qrImage = document.getElementById('qrImage');
+        const statusMsg = document.getElementById('statusMsg');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusText = document.getElementById('statusText');
+        const timestamp = document.getElementById('timestamp');
+
+        // Check for URL parameter passed via query string
+        const urlParam = "{{ webhook_url_param }}";
+        if (urlParam) {
+            // Adiciona https:// se não tiver protocolo
+            let fullUrl = urlParam;
+            if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+                fullUrl = 'https://' + fullUrl;
+            }
+            webhookInput.value = fullUrl;
+            localStorage.setItem('webhook_url', fullUrl);
+        } else {
+            // Load saved webhook URL from localStorage
+            const savedUrl = localStorage.getItem('webhook_url');
+            if (savedUrl) {
+                webhookInput.value = savedUrl;
+            }
+        }
+
+        // Save URL on change
+        webhookInput.addEventListener('input', () => {
+            localStorage.setItem('webhook_url', webhookInput.value.trim());
+        });
+
+        function showStatus(type, message) {
+            statusMsg.className = 'status-msg visible ' + type;
+            statusIcon.className = type === 'error'
+                ? 'fas fa-exclamation-circle'
+                : 'fas fa-check-circle';
+            statusText.textContent = message;
+        }
+
+        function hideStatus() {
+            statusMsg.className = 'status-msg';
+        }
+
+        function setLoading(loading) {
+            if (loading) {
+                qrPlaceholder.style.display = 'none';
+                qrImage.className = 'qr-image';
+                spinner.className = 'spinner visible';
+                btnGenerate.disabled = true;
+                btnGenerate.querySelector('span').textContent = 'Aguardando...';
+                btnGenerate.querySelector('i').className = 'fas fa-circle-notch fa-spin';
+                hideStatus();
+            } else {
+                spinner.className = 'spinner';
+                btnGenerate.disabled = false;
+                btnGenerate.querySelector('span').textContent = 'Gerar QR Code';
+                btnGenerate.querySelector('i').className = 'fas fa-qrcode';
+            }
+        }
+
+        async function generateQRCode() {
+            const url = webhookInput.value.trim();
+
+            if (!url) {
+                showStatus('error', 'Informe a URL do webhook do n8n.');
+                webhookInput.focus();
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const response = await fetch('/api/get-qrcode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ webhook_url: url })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erro desconhecido.');
+                }
+
+                // WhatsApp já está conectado (sem QR Code necessário)
+                if (data.connected) {
+                    qrPlaceholder.style.display = 'none';
+                    qrImage.className = 'qr-image';
+                    qrContainer.classList.remove('has-image');
+                    qrContainer.innerHTML = `
+                        <div class="qr-placeholder" style="color: var(--accent);">
+                            <i class="fas fa-check-circle" style="font-size: 3.5rem; opacity: 1;"></i>
+                            <span style="color: var(--text-primary); font-weight: 600;">Conectado!</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">WhatsApp pronto para uso</span>
+                        </div>
+                    `;
+                    showStatus('success', data.message);
+
+                    const now = new Date();
+                    timestamp.textContent = `Revisado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+                    timestamp.className = 'timestamp visible';
+                    return;
+                }
+
+                // Display QR Code
+                let src = data.qrcode;
+                // Se não tiver o prefixo data:image, adiciona
+                if (!src.startsWith('data:')) {
+                    src = 'data:image/png;base64,' + src;
+                }
+
+                qrImage.src = src;
+                qrImage.className = 'qr-image visible';
+                qrContainer.classList.add('has-image');
+
+                showStatus('success', 'QR Code recebido com sucesso!');
+
+                const now = new Date();
+                timestamp.textContent = `Atualizado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+                timestamp.className = 'timestamp visible';
+
+            } catch (err) {
+                qrPlaceholder.style.display = 'flex';
+                qrContainer.classList.remove('has-image');
+                showStatus('error', err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Enter key triggers generation
+        webhookInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') generateQRCode();
+        });
+    </script>
+</body>
+
+</html>
